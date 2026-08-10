@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.time.Duration;
 import java.util.Collections;
@@ -55,6 +56,15 @@ public class UserService {
                 ttl);
 
         return new LoginResponse(token, user.getId(), user.getUsername(), user.getNickname(), roles);
+    }
+
+    /** 昵称模糊查询，返回 List（≈ JS 的 User[]） */
+    public List<SysUser> searchByNickname(String nickname) {
+        if (!StringUtils.hasText(nickname)) {
+            return Collections.emptyList();
+        }
+        return sysUserMapper.selectList(new LambdaQueryWrapper<SysUser>()
+                .like(SysUser::getNickname, nickname.trim()));
     }
 
     public SysUser getById(Long id) {

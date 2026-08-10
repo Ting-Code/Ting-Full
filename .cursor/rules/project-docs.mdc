@@ -1,5 +1,5 @@
 ---
-description: 项目过程文档位置与 README 职责；开始任务前阅读 docs/project
+description: LEARNING 通用全栈课；CONTEXT 给 AI；高频优先
 alwaysApply: true
 ---
 
@@ -7,16 +7,18 @@ alwaysApply: true
 
 ## README vs 过程记录
 
-- 根目录 `README.md` 仅用于**对外展示**（介绍、架构、快速开始）。不要把迭代进度、待办勾选、踩坑日记写进 README。
-- 目标、进度、决策、约定一律维护在 `docs/project/`。
+- 根 `README.md` 仅对外展示，不写学习勾选。
+- `docs/project/LEARNING.md` — 人看：国内通用全栈课 C01–C30  
+- `docs/project/CONTEXT.md` — AI 看：当前课、规则、工程与决策  
 
-## 开始任务前
+## 带学（零 Java 基础）
 
-1. 阅读 `docs/project/README.md` 索引
-2. 阅读 `docs/project/STATUS.md`（当前进度与待办）
-3. 如涉及选型/结构变更，阅读并必要时更新 `docs/project/DECISIONS.md`
+1. 读 `CONTEXT.md`，按 `LEARNING.md` **当前课** 辅导。  
+2. 目标是**国内高频通用技能**，不是堆本仓库功能。  
+3. 每课固定：① 知识点浅→深 → ② 通用写法（可选对照仓库）→ ③ 极简复盘。  
+4. 跳过 LEARNING「不学清单」（JSP、SSH、过时栈、边角深挖等）。  
+5. 前端对照可以；生活比喻不要；题太难直接给答案。  
 
-## 完成有意义的改动后
+## 改动后
 
-- 更新 `docs/project/STATUS.md` 的已完成/待办
-- 若有新的架构或工具决策，追加到 `docs/project/DECISIONS.md`
+- 更新 `CONTEXT.md` 当前课 / 决策；提醒用户勾选 `LEARNING.md`。

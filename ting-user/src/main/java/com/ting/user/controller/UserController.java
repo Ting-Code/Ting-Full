@@ -16,7 +16,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/user")
@@ -25,9 +28,23 @@ public class UserController {
 
     private final UserService userService;
 
+    /** 健康检查：不查库；经网关时需在白名单，否则无 Token 会 401 */
+    @GetMapping("/ping")
+    public R<String> ping() {
+        return R.ok("pong");
+    }
+
     @PostMapping("/login")
     public R<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return R.ok(userService.login(request));
+    }
+
+    /**
+     * 按昵称模糊查询。注意：必须写在 /{id} 前面，否则 "search" 会被当成 id。
+     */
+    @GetMapping("/search")
+    public R<List<SysUser>> searchByNickname(@RequestParam String nickname) {
+        return R.ok(userService.searchByNickname(nickname));
     }
 
     @GetMapping("/{id}")

@@ -34,7 +34,7 @@ ting-biz/          商品等业务
 ting-common/       公共返回体、常量
 scripts/           本地 Redis / Nacos 启动脚本
 sql/               建库脚本
-docs/project/      项目过程记录（给协作者 / AI 用）
+docs/project/      LEARNING（人）/ CONTEXT（AI）
 ```
 
 ## 快速开始
@@ -83,4 +83,4 @@ pnpm dev
 
 - 本地中间件默认不依赖 Docker；配置见 `scripts/`。  
 - 库表变更使用各服务内 Flyway 脚本（`db/migration`）。  
-- 项目演进与决策记录见 [`docs/project/`](docs/project/)。
+- 学习流程见 [`docs/project/LEARNING.md`](docs/project/LEARNING.md)；工程上下文见 [`docs/project/CONTEXT.md`](docs/project/CONTEXT.md)。

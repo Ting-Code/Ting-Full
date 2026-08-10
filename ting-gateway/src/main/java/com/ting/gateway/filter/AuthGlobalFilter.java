@@ -37,7 +37,8 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     private static final List<String> WHITE_LIST = List.of(
-            "/api/user/login"
+            "/api/user/login",
+            "/api/user/ping"
     );
 
     private final ReactiveStringRedisTemplate redisTemplate;

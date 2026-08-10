@@ -1,7 +1,7 @@
 # Ting-Full：国内通用全栈骨架
 
 > 目标：先熟悉**最常见架构**，再由浅入深抠框架细节。  
-> 技术栈：`Java + Spring Cloud Alibaba + MySQL + Redis + MyBatis-Plus + Flyway`（Vue 后续再加）。
+> 技术栈：`Java + Spring Cloud Alibaba + MySQL + Redis + MyBatis-Plus + Flyway + React + Ant Design`。
 
 ## 骨架已包含
 
@@ -9,21 +9,21 @@
 |------|------|
 | 多模块：gateway / user / biz / common | ✅ |
 | Nacos 注册发现 | ✅ |
-| Gateway 路由 + 跨域 | ✅ |
+| Gateway 路由 + 跨域 + Token 鉴权 | ✅ |
 | OpenFeign 服务调用 | ✅ |
 | MySQL + MyBatis-Plus + Flyway | ✅ |
 | Redis（登录 Token、商品列表缓存） | ✅ |
 | 统一返回体 / 全局异常 | ✅ |
 | springdoc（Apifox 可导入） | ✅ |
 | 本地一键起 Redis+Nacos 脚本 | ✅ |
-| 前端 Vue | ⏳ 未做 |
-| 网关鉴权、RBAC | ✅ 网关 Token（Redis）；RBAC 未做 |
+| 前端 React + Ant Design（`ting-web`） | ✅ |
+| RBAC | ⏳ 未做 |
 
 ## 架构
 
 ```text
-Apifox / 浏览器
-      │
+ting-web (React + Ant Design) :5173
+      │  proxy /api
       ▼
  ting-gateway:8080
       ├─ /api/user/**  → ting-user:8081
@@ -36,28 +36,17 @@ Apifox / 浏览器
 
 ### 1. MySQL（一次）
 
-```bash
-# 执行 sql/init.sql，只建空库 ting
-# 默认账号 root / 123456（不同则改 ting-user、ting-biz 的 application.yml）
-```
-
-表由服务启动时 **Flyway** 自动创建：
-
-- `ting-user/.../db/migration/` → 历史表 `flyway_history_user`
-- `ting-biz/.../db/migration/` → 历史表 `flyway_history_biz`
-- 改表只新增 `V2__xxx.sql`，不要改已提交的旧脚本
+执行 `sql/init.sql` 建空库 `ting`。默认 `root / 123456`。  
+表由服务启动时 Flyway 自动创建。
 
 ### 2. Redis + Nacos
 
 ```bash
-cp scripts/infra.env.example scripts/infra.local.env   # 按需改 REDIS_HOME
+cp scripts/infra.env.example scripts/infra.local.env
 bash scripts/start-infra.sh
 ```
 
-- Nacos：http://127.0.0.1:8848/nacos （nacos/nacos）
-- 首次自动下载到 `tools/nacos`（已 gitignore）
-
-### 3. 业务服务
+### 3. 后端
 
 ```bash
 mvn clean install -DskipTests
@@ -66,31 +55,34 @@ mvn -pl ting-biz spring-boot:run
 mvn -pl ting-gateway spring-boot:run
 ```
 
-### 4. 验证 / Apifox
+### 4. 前端（需 Node 20+，推荐 22）
+
+```bash
+# Windows nvm 示例
+nvm use 22.14.0
+
+cd ting-web
+npm install
+npm run dev
+```
+
+打开 http://127.0.0.1:5173 ，默认账号 `admin / 123456`。
+
+### 5. Apifox
 
 | 接口 | 说明 |
 |------|------|
-| `POST http://127.0.0.1:8080/api/user/login` | 白名单，无需 Token |
-| `GET http://127.0.0.1:8080/api/biz/products` | 需请求头 `X-Token: <登录返回的 token>` |
-| `GET http://127.0.0.1:8080/api/user/me` | 需 `X-Token`；网关会注入 `X-User-Id` |
-
-Apifox：`baseUrl=http://127.0.0.1:8080`，登录后把 `data.token` 存为环境变量，全局 Header 加 `X-Token: {{token}}`。
+| `POST /api/user/login` | 白名单 |
+| 其它 `/api/**` | Header `X-Token` |
 
 ## 端口
 
 | 服务 | 端口 |
 |------|------|
+| ting-web | 5173 |
 | gateway | 8080 |
 | user | 8081 |
 | biz | 8082 |
 | nacos | 8848 |
 | mysql | 3306 |
 | redis | 6379 |
-
-## 目录
-
-```text
-ting-gateway / ting-user / ting-biz / ting-common
-scripts/          # start-infra / stop-infra
-sql/init.sql      # 仅建库
-```

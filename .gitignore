@@ -16,3 +16,7 @@ tools/
 # 每人自己的路径配置
 scripts/infra.local.env
 scripts/infra.local.ps1
+
+# 前端
+ting-web/node_modules/
+ting-web/dist/

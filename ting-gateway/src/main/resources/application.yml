@@ -1,0 +1,44 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ting-gateway
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 127.0.0.1:8848
+    gateway:
+      discovery:
+        locator:
+          # 关闭按服务名直连，避免绕过 /api 路由与鉴权约定
+          enabled: false
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+      routes:
+        - id: ting-user
+          uri: lb://ting-user
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - StripPrefix=1
+        - id: ting-biz
+          uri: lb://ting-biz
+          predicates:
+            - Path=/api/biz/**
+          filters:
+            - StripPrefix=1
+
+# 鉴权说明：
+# - 白名单：POST /api/user/login
+# - 其余 /api/** 需请求头 X-Token
+# - 校验通过后网关写入 X-User-Id 转发给下游

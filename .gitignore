@@ -1,0 +1,18 @@
+target/
+.idea/
+*.iml
+.classpath
+.project
+.settings/
+.vscode/
+*.log
+.DS_Store
+*.class
+.mvn/
+
+# 本机安装的中间件二进制 / 数据目录（不要提交）
+tools/
+
+# 每人自己的路径配置
+scripts/infra.local.env
+scripts/infra.local.ps1

@@ -22,10 +22,13 @@ import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * 网关统一鉴权：查 Redis 中的 Token，通过后写入 X-User-Id 转发给下游。
+ * 网关统一鉴权：Token → 用户；写商品接口额外要求 ADMIN 角色。
  */
 @Component
 @RequiredArgsConstructor
@@ -33,7 +36,6 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
-    /** 无需登录即可访问 */
     private static final List<String> WHITE_LIST = List.of(
             "/api/user/login"
     );
@@ -45,14 +47,13 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
         ServerHttpRequest request = exchange.getRequest();
 
-        // CORS 预检直接放行
         if (HttpMethod.OPTIONS.equals(request.getMethod())) {
             return chain.filter(exchange);
         }
 
         String path = request.getURI().getPath();
         if (isWhiteListed(path)) {
-            return chain.filter(stripClientUserId(exchange));
+            return chain.filter(stripClientAuthHeaders(exchange));
         }
 
         String token = request.getHeaders().getFirst(AuthConstants.TOKEN_HEADER);
@@ -60,19 +61,56 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             return unauthorized(exchange, "未登录");
         }
 
-        String redisKey = AuthConstants.TOKEN_REDIS_PREFIX + token;
-        return redisTemplate.opsForValue().get(redisKey)
+        String userKey = AuthConstants.TOKEN_REDIS_PREFIX + token;
+        String roleKey = AuthConstants.ROLE_REDIS_PREFIX + token;
+
+        return redisTemplate.opsForValue().get(userKey)
                 .flatMap(userId -> {
                     if (!StringUtils.hasText(userId)) {
                         return unauthorized(exchange, "登录已失效");
                     }
-                    ServerHttpRequest mutated = request.mutate()
-                            .headers(headers -> headers.remove(AuthConstants.USER_ID_HEADER))
-                            .header(AuthConstants.USER_ID_HEADER, userId)
-                            .build();
-                    return chain.filter(exchange.mutate().request(mutated).build());
+                    return redisTemplate.opsForValue().get(roleKey)
+                            .defaultIfEmpty("")
+                            .flatMap(rolesCsv -> {
+                                Set<String> roles = parseRoles(rolesCsv);
+                                if (requiresAdmin(request.getMethod(), path)
+                                        && !roles.contains(AuthConstants.ROLE_ADMIN)) {
+                                    return forbidden(exchange, "需要管理员权限");
+                                }
+                                ServerHttpRequest mutated = request.mutate()
+                                        .headers(headers -> {
+                                            headers.remove(AuthConstants.USER_ID_HEADER);
+                                            headers.remove(AuthConstants.ROLES_HEADER);
+                                        })
+                                        .header(AuthConstants.USER_ID_HEADER, userId)
+                                        .header(AuthConstants.ROLES_HEADER, String.join(",", roles))
+                                        .build();
+                                return chain.filter(exchange.mutate().request(mutated).build());
+                            });
                 })
                 .switchIfEmpty(unauthorized(exchange, "登录已失效"));
+    }
+
+    private boolean requiresAdmin(HttpMethod method, String path) {
+        boolean productPath = PATH_MATCHER.match("/api/biz/products", path)
+                || PATH_MATCHER.match("/api/biz/products/**", path);
+        if (!productPath) {
+            return false;
+        }
+        return HttpMethod.POST.equals(method)
+                || HttpMethod.PUT.equals(method)
+                || HttpMethod.DELETE.equals(method)
+                || HttpMethod.PATCH.equals(method);
+    }
+
+    private Set<String> parseRoles(String rolesCsv) {
+        if (!StringUtils.hasText(rolesCsv)) {
+            return Set.of();
+        }
+        return Arrays.stream(rolesCsv.split(","))
+                .map(String::trim)
+                .filter(StringUtils::hasText)
+                .collect(Collectors.toSet());
     }
 
     private boolean isWhiteListed(String path) {
@@ -84,23 +122,34 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         return false;
     }
 
-    /** 白名单接口也去掉客户端自带的 X-User-Id，防止伪造 */
-    private ServerWebExchange stripClientUserId(ServerWebExchange exchange) {
+    private ServerWebExchange stripClientAuthHeaders(ServerWebExchange exchange) {
         ServerHttpRequest request = exchange.getRequest().mutate()
-                .headers(headers -> headers.remove(AuthConstants.USER_ID_HEADER))
+                .headers(headers -> {
+                    headers.remove(AuthConstants.USER_ID_HEADER);
+                    headers.remove(AuthConstants.ROLES_HEADER);
+                })
                 .build();
         return exchange.mutate().request(request).build();
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange, String message) {
+        return writeJson(exchange, HttpStatus.UNAUTHORIZED, R.fail(401, message));
+    }
+
+    private Mono<Void> forbidden(ServerWebExchange exchange, String message) {
+        return writeJson(exchange, HttpStatus.FORBIDDEN, R.fail(403, message));
+    }
+
+    private Mono<Void> writeJson(ServerWebExchange exchange, HttpStatus status, R<?> body) {
         ServerHttpResponse response = exchange.getResponse();
-        response.setStatusCode(HttpStatus.UNAUTHORIZED);
+        response.setStatusCode(status);
         response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
         byte[] bytes;
         try {
-            bytes = objectMapper.writeValueAsBytes(R.fail(401, message));
+            bytes = objectMapper.writeValueAsBytes(body);
         } catch (JsonProcessingException e) {
-            bytes = ("{\"code\":401,\"message\":\"" + message + "\"}").getBytes(StandardCharsets.UTF_8);
+            bytes = ("{\"code\":" + status.value() + ",\"message\":\"" + body.getMessage() + "\"}")
+                    .getBytes(StandardCharsets.UTF_8);
         }
         DataBuffer buffer = response.bufferFactory().wrap(bytes);
         return response.writeWith(Mono.just(buffer));

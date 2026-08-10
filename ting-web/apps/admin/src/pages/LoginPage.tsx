@@ -49,7 +49,7 @@ export default function LoginPage() {
           Ting-Full
         </Typography.Title>
         <Typography.Paragraph type="secondary" style={{ textAlign: 'center' }}>
-          React + Ant Design · 对接网关鉴权
+          admin / 123456（ADMIN）· user / 123456（仅查看）
         </Typography.Paragraph>
         <Form<LoginForm>
           size="large"

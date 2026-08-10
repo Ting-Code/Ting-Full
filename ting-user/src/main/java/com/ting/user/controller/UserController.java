@@ -4,6 +4,7 @@ import com.ting.common.constant.AuthConstants;
 import com.ting.common.result.R;
 import com.ting.user.dto.LoginRequest;
 import com.ting.user.dto.LoginResponse;
+import com.ting.user.dto.UserProfile;
 import com.ting.user.entity.SysUser;
 import com.ting.user.service.UserService;
 import jakarta.validation.Valid;
@@ -38,15 +39,15 @@ public class UserController {
      * 优先使用网关写入的 X-User-Id；直连调试时仍可用 X-Token。
      */
     @GetMapping("/me")
-    public R<SysUser> me(
+    public R<UserProfile> me(
             @RequestHeader(value = AuthConstants.USER_ID_HEADER, required = false) Long userId,
             @RequestHeader(value = AuthConstants.TOKEN_HEADER, required = false) String token) {
         if (userId != null) {
-            return R.ok(userService.getById(userId));
+            return R.ok(userService.profile(userId));
         }
         if (!StringUtils.hasText(token)) {
             return R.fail(401, "未登录");
         }
-        return R.ok(userService.getById(userService.resolveUserIdByToken(token)));
+        return R.ok(userService.profile(userService.resolveUserIdByToken(token)));
     }
 }

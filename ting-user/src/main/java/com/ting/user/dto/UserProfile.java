@@ -1,17 +1,15 @@
 package com.ting.user.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.util.List;
 
 @Data
-@AllArgsConstructor
-public class LoginResponse {
+public class UserProfile {
 
-    private String token;
-    private Long userId;
+    private Long id;
     private String username;
     private String nickname;
+    private Integer status;
     private List<String> roles;
 }

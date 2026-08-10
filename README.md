@@ -1,88 +1,86 @@
-# Ting-Full：国内通用全栈骨架
+# Ting-Full
 
-> 目标：先熟悉**最常见架构**，再由浅入深抠框架细节。  
-> 技术栈：`Java + Spring Cloud Alibaba + MySQL + Redis + MyBatis-Plus + Flyway + React + Ant Design`。
+基于国内主流技术栈的全栈示例项目：Spring Cloud Alibaba 微服务后端 + React 管理端。
 
-## 骨架已包含
+适合学习「网关鉴权、服务拆分、库表迁移、前后端联调」的完整链路。
 
-| 能力 | 状态 |
-|------|------|
-| 多模块：gateway / user / biz / common | ✅ |
-| Nacos 注册发现 | ✅ |
-| Gateway 路由 + 跨域 + Token 鉴权 | ✅ |
-| OpenFeign 服务调用 | ✅ |
-| MySQL + MyBatis-Plus + Flyway | ✅ |
-| Redis（登录 Token、商品列表缓存） | ✅ |
-| 统一返回体 / 全局异常 | ✅ |
-| springdoc（Apifox 可导入） | ✅ |
-| 本地一键起 Redis+Nacos 脚本 | ✅ |
-| 前端 React + Ant Design（`ting-web`） | ✅ |
-| RBAC | ⏳ 未做 |
+## 技术栈
+
+| 层 | 技术 |
+|----|------|
+| 前端 | React 19、Ant Design 6、Vite、pnpm workspace、TypeScript |
+| 网关 | Spring Cloud Gateway、Redis Token 鉴权 |
+| 服务 | Spring Boot 3、Spring Cloud Alibaba、OpenFeign、Nacos |
+| 数据 | MySQL 8、MyBatis-Plus、Flyway、Redis |
+| 文档 | springdoc OpenAPI（可导入 Apifox） |
 
 ## 架构
 
 ```text
-ting-web (React + Ant Design) :5173
-      │  proxy /api
-      ▼
- ting-gateway:8080
-      ├─ /api/user/**  → ting-user:8081
-      └─ /api/biz/**   → ting-biz:8082
-              ↓
-         Nacos + MySQL + Redis
+ting-web/apps/admin  ──/api──►  ting-gateway
+                                    ├─► ting-user
+                                    └─► ting-biz
+                                         │
+                              Nacos · MySQL · Redis
 ```
 
-## 快速启动
+## 仓库结构
 
-### 1. MySQL（一次）
+```text
+ting-web/          前端 pnpm monorepo（admin + shared）
+ting-gateway/      API 网关
+ting-user/         用户与登录
+ting-biz/          商品等业务
+ting-common/       公共返回体、常量
+scripts/           本地 Redis / Nacos 启动脚本
+sql/               建库脚本
+docs/project/      项目过程记录（给协作者 / AI 用）
+```
 
-执行 `sql/init.sql` 建空库 `ting`。默认 `root / 123456`。  
-表由服务启动时 Flyway 自动创建。
+## 快速开始
 
-### 2. Redis + Nacos
+**环境：** JDK 21、Maven 3.9+、Node 20+（推荐 22）、本机 MySQL / Redis，以及 Nacos（可用脚本拉起）。
 
 ```bash
+# 1. 建库
+# 执行 sql/init.sql（库名 ting；默认示例账号见下方）
+
+# 2. 中间件
 cp scripts/infra.env.example scripts/infra.local.env
 bash scripts/start-infra.sh
-```
 
-### 3. 后端
-
-```bash
+# 3. 后端
 mvn clean install -DskipTests
 mvn -pl ting-user spring-boot:run
 mvn -pl ting-biz spring-boot:run
 mvn -pl ting-gateway spring-boot:run
-```
 
-### 4. 前端（需 Node 20+，推荐 22）
-
-```bash
-# Windows nvm 示例
-nvm use 22.14.0
-
+# 4. 前端
 cd ting-web
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
-打开 http://127.0.0.1:5173 ，默认账号 `admin / 123456`。
+- 管理端：http://127.0.0.1:5173  
+- 演示账号：`admin / 123456`（ADMIN，可改商品）、`user / 123456`（USER，只读）  
+- 网关：http://127.0.0.1:8080  
 
-### 5. Apifox
-
-| 接口 | 说明 |
-|------|------|
-| `POST /api/user/login` | 白名单 |
-| 其它 `/api/**` | Header `X-Token` |
+登录后请求需携带请求头 `X-Token`（前端已自动处理）。OpenAPI：`http://127.0.0.1:8081/v3/api-docs`、`http://127.0.0.1:8082/v3/api-docs`。
 
 ## 端口
 
 | 服务 | 端口 |
 |------|------|
-| ting-web | 5173 |
-| gateway | 8080 |
-| user | 8081 |
-| biz | 8082 |
-| nacos | 8848 |
-| mysql | 3306 |
-| redis | 6379 |
+| 管理端 | 5173 |
+| 网关 | 8080 |
+| 用户服务 | 8081 |
+| 业务服务 | 8082 |
+| Nacos | 8848 |
+| MySQL | 3306 |
+| Redis | 6379 |
+
+## 说明
+
+- 本地中间件默认不依赖 Docker；配置见 `scripts/`。  
+- 库表变更使用各服务内 Flyway 脚本（`db/migration`）。  
+- 项目演进与决策记录见 [`docs/project/`](docs/project/)。

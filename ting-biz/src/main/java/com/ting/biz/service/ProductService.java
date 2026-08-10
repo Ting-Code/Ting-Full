@@ -1,6 +1,7 @@
 package com.ting.biz.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.ting.biz.dto.ProductSaveRequest;
 import com.ting.biz.entity.BizProduct;
 import com.ting.biz.feign.UserFeignClient;
 import com.ting.biz.mapper.BizProductMapper;
@@ -59,6 +60,36 @@ public class ProductService {
             throw new BizException("商品不存在");
         }
         return product;
+    }
+
+    public BizProduct create(ProductSaveRequest request) {
+        BizProduct product = new BizProduct();
+        product.setName(request.getName());
+        product.setPrice(request.getPrice());
+        product.setStock(request.getStock());
+        product.setStatus(request.getStatus() == null ? 1 : request.getStatus());
+        productMapper.insert(product);
+        clearListCache();
+        return product;
+    }
+
+    public BizProduct update(Long id, ProductSaveRequest request) {
+        BizProduct product = getById(id);
+        product.setName(request.getName());
+        product.setPrice(request.getPrice());
+        product.setStock(request.getStock());
+        if (request.getStatus() != null) {
+            product.setStatus(request.getStatus());
+        }
+        productMapper.updateById(product);
+        clearListCache();
+        return product;
+    }
+
+    public void delete(Long id) {
+        getById(id);
+        productMapper.deleteById(id);
+        clearListCache();
     }
 
     public void clearListCache() {

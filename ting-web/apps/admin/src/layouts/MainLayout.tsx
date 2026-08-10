@@ -60,7 +60,10 @@ export default function MainLayout() {
           >
             <Space style={{ cursor: 'pointer' }}>
               <UserOutlined />
-              <Typography.Text>{user?.nickname || user?.username || '用户'}</Typography.Text>
+              <Typography.Text>
+                {user?.nickname || user?.username || '用户'}
+                {user?.roles?.length ? `（${user.roles.join(',')}）` : ''}
+              </Typography.Text>
             </Space>
           </Dropdown>
         </Header>

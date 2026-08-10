@@ -1,0 +1,22 @@
+---
+description: 项目过程文档位置与 README 职责；开始任务前阅读 docs/project
+alwaysApply: true
+---
+
+# 项目文档约定
+
+## README vs 过程记录
+
+- 根目录 `README.md` 仅用于**对外展示**（介绍、架构、快速开始）。不要把迭代进度、待办勾选、踩坑日记写进 README。
+- 目标、进度、决策、约定一律维护在 `docs/project/`。
+
+## 开始任务前
+
+1. 阅读 `docs/project/README.md` 索引
+2. 阅读 `docs/project/STATUS.md`（当前进度与待办）
+3. 如涉及选型/结构变更，阅读并必要时更新 `docs/project/DECISIONS.md`
+
+## 完成有意义的改动后
+
+- 更新 `docs/project/STATUS.md` 的已完成/待办
+- 若有新的架构或工具决策，追加到 `docs/project/DECISIONS.md`

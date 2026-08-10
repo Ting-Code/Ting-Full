@@ -17,6 +17,9 @@ tools/
 scripts/infra.local.env
 scripts/infra.local.ps1
 
-# 前端
+# 前端 monorepo (pnpm) — 全部在 ting-web/ 下
 ting-web/node_modules/
-ting-web/dist/
+ting-web/**/node_modules/
+ting-web/**/dist/
+ting-web/.pnpm-store/
+*.tsbuildinfo

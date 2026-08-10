@@ -1,11 +1,6 @@
 import axios from 'axios'
 import { message } from 'antd'
-
-export interface ApiResult<T> {
-  code: number
-  message: string
-  data: T
-}
+import { AUTH_TOKEN_HEADER, type ApiResult } from '@ting/shared'
 
 const http = axios.create({
   baseURL: '/api',
@@ -15,7 +10,7 @@ const http = axios.create({
 http.interceptors.request.use((config) => {
   const token = localStorage.getItem('ting_token')
   if (token) {
-    config.headers['X-Token'] = token
+    config.headers[AUTH_TOKEN_HEADER] = token
   }
   return config
 })
@@ -38,10 +33,14 @@ http.interceptors.response.use(
       if (!window.location.pathname.startsWith('/login')) {
         window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
       }
+    } else if (status === 403) {
+      message.error(msg || '没有权限')
+      return Promise.reject(error)
     }
     message.error(msg)
     return Promise.reject(error)
   },
 )
 
+export type { ApiResult }
 export default http

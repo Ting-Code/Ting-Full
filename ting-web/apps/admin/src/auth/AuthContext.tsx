@@ -6,11 +6,13 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { fetchMe, login as loginApi, type LoginData, type LoginPayload, type UserInfo } from '../api/auth'
+import { ROLE_ADMIN, type LoginData, type LoginPayload, type UserInfo } from '@ting/shared'
+import { fetchMe, login as loginApi } from '../api/auth'
 
 interface AuthState {
   token: string | null
   user: UserInfo | null
+  isAdmin: boolean
   login: (payload: LoginPayload) => Promise<void>
   logout: () => void
   refreshMe: () => Promise<void>
@@ -22,7 +24,9 @@ function readUser(): UserInfo | null {
   const raw = localStorage.getItem('ting_user')
   if (!raw) return null
   try {
-    return JSON.parse(raw) as UserInfo
+    const user = JSON.parse(raw) as UserInfo
+    if (!user.roles) user.roles = []
+    return user
   } catch {
     return null
   }
@@ -39,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       username: loginData.username,
       nickname: loginData.nickname,
       status: 1,
+      roles: loginData.roles || [],
     }
     localStorage.setItem('ting_user', JSON.stringify(info))
     setToken(loginData.token)
@@ -59,13 +64,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshMe = useCallback(async () => {
     const me = await fetchMe()
+    if (!me.roles) me.roles = []
     localStorage.setItem('ting_user', JSON.stringify(me))
     setUser(me)
   }, [])
 
+  const isAdmin = Boolean(user?.roles?.includes(ROLE_ADMIN))
+
   const value = useMemo(
-    () => ({ token, user, login, logout, refreshMe }),
-    [token, user, login, logout, refreshMe],
+    () => ({ token, user, isAdmin, login, logout, refreshMe }),
+    [token, user, isAdmin, login, logout, refreshMe],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

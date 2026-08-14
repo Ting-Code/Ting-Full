@@ -1,5 +1,5 @@
 ---
-description: LEARNING 通用全栈课；CONTEXT 给 AI；高频优先
+description: LEARNING 全栈课表；CONTEXT 给 AI；高频优先；课号脱敏
 alwaysApply: true
 ---
 
@@ -8,17 +8,20 @@ alwaysApply: true
 ## README vs 过程记录
 
 - 根 `README.md` 仅对外展示，不写学习勾选。
-- `docs/project/LEARNING.md` — 人看：国内通用全栈课 C01–C30  
-- `docs/project/CONTEXT.md` — AI 看：当前课、规则、工程与决策  
+- `docs/project/LEARNING.md` — 人看：路线 **1 基础 → 2 Boot → 3 SCA → 4·568 → 5·303**
+- `docs/project/CONTEXT.md` — AI 看：当前小课、规则、工程与决策
 
 ## 带学（零 Java 基础）
 
-1. 读 `CONTEXT.md`，按 `LEARNING.md` **当前课** 辅导。  
+1. 读 `CONTEXT.md`，按 `LEARNING.md` **当前小课（如 A1.1）** 辅导。  
 2. 目标是**国内高频通用技能**，不是堆本仓库功能。  
-3. 每课固定：① 知识点浅→深 → ② 通用写法（可选对照仓库）→ ③ 极简复盘。  
-4. 跳过 LEARNING「不学清单」（JSP、SSH、过时栈、边角深挖等）。  
+3. 每课固定：①是什么 → ②为什么 → ③细节 → ④练习 → ⑤复盘 → ⑥面试短答 → ⑦工作场景。  
+4. **星级：** 星越多越重要；五星精讲多练，一星带过或跳。跳过 LEARNING「不学清单」。  
 5. 前端对照可以；生活比喻不要；题太难直接给答案。  
+6. **旧计划已废弃**：勿再按 S1～S5、C01～C30、P0～P7 上课。  
+7. **课号锁定：** 660（或带学）+ 332 → 474 → 522 → 568 → 303；不要体系课；不做 641。  
+8. **脱敏：** 文档与回复默认只写课号，不写视频平台名、不贴课程 URL（用户明确要求链接时除外）。
 
 ## 改动后
 
-- 更新 `CONTEXT.md` 当前课 / 决策；提醒用户勾选 `LEARNING.md`。
+- 更新 `CONTEXT.md` 当前小课 / 决策；提醒用户勾选 `LEARNING.md`。

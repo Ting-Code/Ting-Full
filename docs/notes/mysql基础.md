@@ -905,18 +905,477 @@ WHERE b.course_id IS NULL;
 
 > 补：也可用 `WHERE a.course_id NOT IN (SELECT course_id FROM imc_chapter)`，但关联写法通常更清晰；注意 `NOT IN` 子查询里若有 NULL 会踩坑。
 
+#### GROUP BY 与聚合函数
+
+**是什么**
+
+`GROUP BY`：按某些列的值把结果集**分成若干组**，每组通常再算一个统计值。  
+聚合函数：对一组行算出一个数（个数、总和、平均等）。二者经常一起用。
+
+**常用聚合函数**
+
+| 函数 | 作用 |
+|------|------|
+| `COUNT(*)` | 统计行数 |
+| `COUNT(列)` | 统计该列非 NULL 的行数 |
+| `COUNT(DISTINCT 列)` | 统计去重后的个数 |
+| `SUM(列)` | 求和（数值列） |
+| `AVG(列)` | 平均值 |
+| `MAX(列)` / `MIN(列)` | 最大 / 最小 |
+
+不写 `GROUP BY` 时，整张表（或过滤后的全部行）当作**一组**，也能用聚合：
+
+```sql
+SELECT COUNT(*) AS course_cnt FROM imc_course;           -- 总课程数
+SELECT SUM(study_cnt) AS total_learners FROM imc_course; -- 学习人次合计
+SELECT COUNT(DISTINCT teacher_id) FROM imc_course;       -- 有多少不同讲师
+```
+
+**按组统计（GROUP BY）**
+
+需求：每种难度有多少门课。
+
+```sql
+SELECT l.level_name, COUNT(*) AS course_cnt
+FROM imc_course AS c
+INNER JOIN imc_level AS l ON l.level_id = c.level_id
+GROUP BY l.level_name;
+```
+
+逻辑：先 JOIN 得到明细 → 再按 `level_name` 分组 → 每组 `COUNT(*)` 一门数。  
+`GROUP BY` 后的列叫**分组键**；每个分组键取值在结果里通常只占一行。
+
+**硬规则（必记）**
+
+`SELECT` 里出现的**非聚合列**，必须出现在 `GROUP BY` 中。
+
+| 现象 | 原因 → 改法 |
+|------|-------------|
+| 只 `GROUP BY level_name`，却 `SELECT class_name, level_name, COUNT(*)` | 宽松模式下可能跑出，但分类名残缺/不准；严格模式（`ONLY_FULL_GROUP_BY`）直接报错 |
+| 正确 | 两个维度都要统计时：`GROUP BY class_name, level_name` |
+
+```sql
+-- 每个分类 × 每种难度 的课程数
+SELECT b.class_name, c.level_name, COUNT(*) AS course_cnt
+FROM imc_course AS a
+INNER JOIN imc_class AS b ON b.class_id = a.class_id
+INNER JOIN imc_level AS c ON c.level_id = a.level_id
+GROUP BY b.class_name, c.level_name;
+```
+
+#### HAVING（过滤分组结果）
+
+**是什么**
+
+`HAVING`：对 **GROUP BY 聚合之后** 的结果再过滤。  
+`WHERE`：对 **分组之前** 的行过滤。
+
+| | WHERE | HAVING |
+|--|-------|--------|
+| 时机 | 先滤行，再分组 | 先分组聚合，再滤组 |
+| 聚合函数 | **不能**写（如 `COUNT(*)>3` 会报错） | **可以**写 |
+| 典型用途 | `status=1`、`study_cnt>1000` | `COUNT(*)>3`、`SUM(x)>100` |
+
+**案例（现象 → 改法）**
+
+需求：每个分类下，某难度的课程门数 **大于 3** 的那些组合。
+
+```sql
+-- 错：WHERE 里用聚合 → 报错（非法使用聚合函数）
+SELECT b.class_name, c.level_name, COUNT(*) AS course_cnt
+FROM imc_course AS a
+INNER JOIN imc_class AS b ON b.class_id = a.class_id
+INNER JOIN imc_level AS c ON c.level_id = a.level_id
+WHERE COUNT(*) > 3
+GROUP BY b.class_name, c.level_name;
+
+-- 对：聚合条件放 HAVING
+SELECT b.class_name, c.level_name, COUNT(*) AS course_cnt
+FROM imc_course AS a
+INNER JOIN imc_class AS b ON b.class_id = a.class_id
+INNER JOIN imc_level AS c ON c.level_id = a.level_id
+GROUP BY b.class_name, c.level_name
+HAVING COUNT(*) > 3;
+```
+
+逻辑：先按分类+难度分组并 `COUNT` → 再丢掉门数 ≤3 的组 → 只留门数 >3 的行。
+
+**执行顺序（方便记）**
+
+```text
+FROM / JOIN → WHERE（滤行）→ GROUP BY（分组）→ 聚合 → HAVING（滤组）→ SELECT → ORDER BY
+```
+
+行条件用 WHERE；组条件用 HAVING。
+
+#### ORDER BY / LIMIT
+
+**ORDER BY：结果排序**
+
+不写 ORDER BY 时，结果顺序**不保证**（InnoDB 常看起来像按主键，但不能依赖）。  
+需要稳定顺序时，必须写 `ORDER BY`。
+
+```sql
+SELECT title, study_cnt
+FROM imc_course
+ORDER BY study_cnt DESC;   -- 降序：从高到低
+-- ORDER BY study_cnt ASC; -- 升序：从低到高（ASC 可省略，默认升序）
+```
+
+| 要点 | 说明 |
+|------|------|
+| `ASC` / `DESC` | 升序 / 降序，写在排序列后面 |
+| 多列排序 | `ORDER BY a DESC, b ASC`：先按 a，a 相同再按 b |
+| 可排未选出的列 | 与 GROUP BY 不同，ORDER BY 可以用 SELECT 里没出现的列 |
+
+**LIMIT：限制返回行数（分页）**
+
+结果集很大时，一次全返回会压客户端内存和网络。分页用 LIMIT。
+
+```sql
+-- LIMIT 起始位置, 返回行数   （起始从 0 开始）
+SELECT course_id, title
+FROM imc_course
+ORDER BY study_cnt DESC
+LIMIT 0, 10;    -- 第 1 页：跳过 0 行，取 10 行
+
+LIMIT 10, 10;   -- 第 2 页：跳过 10 行，取 10 行
+LIMIT 20, 10;   -- 第 3 页
+```
+
+也可写成 `LIMIT 10 OFFSET 20`（先写条数再写偏移，注意和上面两种参数顺序不同）。
+
+**硬规则：LIMIT 要配合 ORDER BY**
+
+分页每次都会重新查；没有 ORDER BY，各页顺序可能乱，同一行可能出现在不同页或漏页。  
+正确写法：**先 ORDER BY，再 LIMIT**。
+
+```text
+… WHERE … GROUP BY … HAVING … ORDER BY … LIMIT …
+```
+
+#### DELETE / UPDATE
+
+二者都改**已有行**；写之前先用同一条件的 `SELECT` 确认目标行，再改成 DELETE / UPDATE。
+
+##### DELETE（删行）
+
+删的是行数据，表结构还在。全表清空更推荐 `TRUNCATE`（DDL）；只删部分行用 `DELETE` + `WHERE`。
+
+```sql
+DELETE FROM 表名
+WHERE 条件;
+```
+
+**案例：删除没有章节的课程**（先查出，再删）
+
+```sql
+-- 1) 先查确认
+SELECT a.course_id, a.title
+FROM imc_course AS a
+LEFT JOIN imc_chapter AS b ON b.course_id = a.course_id
+WHERE b.course_id IS NULL;
+
+-- 2) 改成删除（多表时写明删哪张表）
+DELETE a
+FROM imc_course AS a
+LEFT JOIN imc_chapter AS b ON b.course_id = a.course_id
+WHERE b.course_id IS NULL;
+```
+
+| 要点 | 说明 |
+|------|------|
+| 必写 WHERE（多数情况） | 忘写 = 可能删光整表 |
+| 多表 | `DELETE 别名 FROM … JOIN … WHERE …` |
+| LIMIT | 可限删除行数；只有一个参数（最大删几行） |
+| vs TRUNCATE | 全表清空优先 TRUNCATE；按条件删用 DELETE |
+
+> 补：删重复行常见套路——`GROUP BY … HAVING COUNT(*)>1` 找出重复，保留 `MIN(id)`，删掉其余，再加 UNIQUE。
+
+##### UPDATE（改列值）
+
+```sql
+UPDATE 表名
+SET 列1 = 值1, 列2 = 值2
+WHERE 条件;
+```
+
+**案例：冻结用户**
+
+```sql
+-- 1) 先查
+SELECT user_nickname, user_status FROM imc_user WHERE user_nickname = '沙站';
+
+-- 2) 再改（status: 1 正常 → 0 禁用）
+UPDATE imc_user
+SET user_status = 0
+WHERE user_nickname = '沙站';
+```
+
+| 要点 | 说明 |
+|------|------|
+| SET | 要改的列 = 新值；多列用逗号分隔 |
+| WHERE | **极重要**；写错/漏写可能改全表 |
+| 安全流程 | 同条件先 SELECT → 确认 → 再 UPDATE |
+| ORDER BY + LIMIT | 少用于日常；大批量可分批更新，减轻锁与延迟 |
+
 ### 3.4 练习 ★★★★★
 
-1. 内连接和外连接（LEFT）差别？  
-2. `FROM imc_course AS a` 和 `b.title AS chapter_title` 两个 AS 各表示什么？  
-3. 只有课程、没有章节时，LEFT JOIN 结果里章节列是什么？  
-4. 如何查出「有课程、但没有任何章节」的课？  
-5. 写出：`course c` LEFT JOIN `chapter ch`，按 `course_id`，取课程标题和章节标题。  
+1. DELETE 和 TRUNCATE 差别？UPDATE 的 SET / WHERE 各做什么？  
+2. 为什么 DELETE / UPDATE 前要先写 SELECT？  
+3. 漏写 WHERE 会怎样？  
+4. 多表 DELETE 时为什么要写 `DELETE a`？  
+5. 写出：把 `course` 中 `id=10` 的 `title` 改成 `'新标题'`。  
 
 **答案**
 
-1. 内连接只要两边都匹配；LEFT JOIN 保留左表全部，右表对不上则为 NULL。  
-2. 前者是表别名；后者是结果列的显示名。  
-3. `NULL`。  
-4. LEFT JOIN 后加 `WHERE 右表关联键 IS NULL`。  
-5. `SELECT c.title, ch.title FROM course c LEFT JOIN chapter ch ON ch.course_id = c.course_id;`  
+1. DELETE 按条件删行；TRUNCATE 清空整表属 DDL。SET 指定改哪些列和值；WHERE 限定改哪些行。  
+2. 确认将要动到的行是否正确，避免误删误改。  
+3. 可能删光或改光整表。  
+4. JOIN 多表时要指明删的是哪张表的行。  
+5. `UPDATE course SET title = '新标题' WHERE id = 10;`  
+
+### 3.5 常用函数 ★★★★
+
+#### 时间
+
+业务里录入/修改时间应尽量用**数据库服务器时间**，避免多台应用服务器时钟不一致。  
+时间要用日期时间类型存，**不要存成字符串**（难校验、难运算、更占空间）。需要某种显示格式时用函数格式化输出即可。
+
+#### 取当前时间
+
+| 函数 | 返回 |
+|------|------|
+| `CURRENT_DATE` / `CURDATE()` | 当前日期 |
+| `CURRENT_TIME` / `CURTIME()` | 当前时间（时分秒） |
+| `NOW()` | 当前日期 + 时间 |
+
+```sql
+SELECT CURRENT_DATE, CURRENT_TIME, NOW();
+```
+
+#### 格式化输出
+
+`DATE_FORMAT(时间, 格式)`：按指定格式输出（存的仍是时间类型）。
+
+| 格式符 | 含义 |
+|--------|------|
+| `%Y` | 四位年 |
+| `%m` | 月（01–12） |
+| `%d` | 日（01–31） |
+| `%H` | 时（00–23） |
+| `%i` | 分 |
+| `%s` | 秒 |
+
+```sql
+SELECT DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s');
+```
+
+#### 换算与日差
+
+| 函数 | 作用 |
+|------|------|
+| `SEC_TO_TIME(秒)` | 秒 → `HH:MM:SS` |
+| `TIME_TO_SEC('HH:MM:SS')` | 时分秒 → 秒 |
+| `DATEDIFF(日期1, 日期2)` | 两个日期相差天数 |
+
+```sql
+SELECT SEC_TO_TIME(60);              -- 00:01:00
+SELECT TIME_TO_SEC('01:00:00');      -- 3600
+SELECT title, DATEDIFF(NOW(), online_at) AS days_online
+FROM imc_course
+ORDER BY days_online DESC;
+```
+
+#### 加减与提取
+
+```sql
+-- DATE_ADD：按时间单元加减（减用负数）
+SELECT NOW() AS now,
+       DATE_ADD(NOW(), INTERVAL 1 DAY) AS plus_1d,
+       DATE_ADD(NOW(), INTERVAL 1 YEAR) AS plus_1y,
+       DATE_ADD(NOW(), INTERVAL -1 DAY) AS minus_1d,
+       DATE_SUB(NOW(), INTERVAL 90 MINUTE) AS minus_1h30m;
+-- 时间单元常见：YEAR / MONTH / DAY / HOUR / MINUTE / SECOND
+
+-- EXTRACT：取时间的某一部分
+SELECT EXTRACT(YEAR FROM NOW()),
+       EXTRACT(MONTH FROM NOW()),
+       EXTRACT(DAY FROM NOW());
+```
+
+> 补：`UNIX_TIMESTAMP` / `FROM_UNIXTIME` 可做时间戳互转；新项目更推荐直接用日期时间类型，少用纯时间戳存库。
+
+#### 字符串
+
+**拼接**
+
+| 函数 | 作用 |
+|------|------|
+| `CONCAT(a, b, …)` | 直接拼接多个字符串/列 |
+| `CONCAT_WS(分隔符, a, b, …)` | 用指定分隔符拼接 |
+
+```sql
+SELECT CONCAT(b.class_name, a.title) AS raw_join
+FROM imc_course a
+INNER JOIN imc_class b ON b.class_id = a.class_id;
+
+SELECT CONCAT_WS('||', b.class_name, a.title) AS seo_title
+FROM imc_course a
+INNER JOIN imc_class b ON b.class_id = a.class_id;
+```
+
+**长度**
+
+| 函数 | 含义 |
+|------|------|
+| `CHAR_LENGTH(s)` / `CHARACTER_LENGTH(s)` | **字符**个数 |
+| `LENGTH(s)` | **字节**个数 |
+
+utf8mb4 下中文常是多字节：`"安全测试"` → `CHAR_LENGTH=4`，`LENGTH` 更大。英文字母两者常相同。
+
+**截取**
+
+| 函数 | 作用 |
+|------|------|
+| `LEFT(s, n)` / `RIGHT(s, n)` | 从左/右取 n 个字符 |
+| `SUBSTRING(s, pos)` | 从第 pos 个字符到末尾（下标从 1 起） |
+| `SUBSTRING(s, pos, len)` | 从 pos 起取 len 个 |
+| `SUBSTRING_INDEX(s, 分隔符, n)` | 按分隔符切；`n` 正=从左第 n 个分隔符之前，负=从右 |
+
+```sql
+SELECT LEFT('www.imc.com', 3), RIGHT('www.imc.com', 3);  -- www / com
+SELECT SUBSTRING('www.imc.com', 5);                      -- imc.com
+SELECT SUBSTRING_INDEX('192.168.0.100', '.', -2);        -- 0.100
+```
+
+**定位 + 截取（案例）**
+
+标题形如 `前缀-后缀`，只要横线前：
+
+```sql
+-- LOCATE 找位置（从 1 起）；截到横线前要减 1
+SELECT title,
+       SUBSTRING(title, 1, LOCATE('-', title) - 1) AS prefix
+FROM imc_course
+WHERE LOCATE('-', title) > 0;
+```
+
+**数字千分位显示**
+
+`FORMAT(数值, 小数位数)`：整数部分每三位逗号，并四舍五入到指定小数位。
+
+```sql
+SELECT FORMAT(123456.789, 2);  -- 123,456.79
+```
+
+#### 其它常用
+
+| 函数 | 作用 | 注意 |
+|------|------|------|
+| `ROUND(x, d)` | 四舍五入到 d 位小数 | 金额计算常用 |
+| `RAND()` | 0～1 随机数 | 大表 `ORDER BY RAND()` 很慢，不推荐 |
+| `CASE WHEN … THEN … ELSE … END` | 按条件换显示/逻辑 | 可出现在 SELECT / WHERE |
+| `MD5(s)` | 算 MD5 | 课上用于密码示例；现代系统密码应用更强哈希（工作里别只靠 MD5） |
+
+```sql
+SELECT user_nick,
+       CASE
+         WHEN sex = 1 THEN '男'
+         WHEN sex = 0 THEN '女'
+         ELSE '未知'
+       END AS gender
+FROM imc_user;
+```
+
+### 3.5 练习 ★★★★
+
+1. 为何业务时间用库时间？为何时间不要存字符串？  
+2. `CONCAT` 和 `CONCAT_WS` 差别？`LENGTH` 和 `CHAR_LENGTH` 差别？  
+3. `LEFT` / `SUBSTRING` / `SUBSTRING_INDEX` 各做什么？  
+4. 如何截取 `title` 里第一个 `-` 之前的部分？  
+5. `CASE WHEN` 和 `ORDER BY RAND()` 各注意什么？  
+
+**答案**
+
+1. 多机时钟可能不一致；字符串难校验/运算，应用日期时间类型 + `DATE_FORMAT` 输出。  
+2. 后者可指定分隔符；`LENGTH` 计字节，`CHAR_LENGTH` 计字符。  
+3. 左右取固定长度；从位置截取；按分隔符取段。  
+4. `SUBSTRING(title, 1, LOCATE('-', title) - 1)`（先确认有 `-`）。  
+5. CASE 把编码转成可读文案等；大表不要用 `ORDER BY RAND()` 做随机，性能差。
+
+---
+
+## 第4章 索引
+
+### 4.1 索引是什么 · B+Tree ★★★★★
+
+**是什么**
+
+索引告诉存储引擎**怎么快速找到**需要的行。它在**存储引擎层**实现（不是 SQL 服务层），所以不同引擎的索引细节可能不同。  
+日常说「索引」，默认指 **B+Tree 索引**（InnoDB 最常用）。
+
+| 类型 | 要不要管 |
+|------|----------|
+| B+Tree | **必学**，默认就是它 |
+| 自适应哈希 | InnoDB 自动建，开发不用管 |
+| 全文 / 空间 | 入门可跳；中文全文更常上专门搜索引擎 |
+
+**B+Tree 要点（能口述）**
+
+1. 平衡多路树：根到任意叶子的高度一样。  
+2. **记录在叶子层**，按键值有序。  
+3. 叶子之间有指针相连 → 方便范围扫描。  
+4. InnoDB：**聚簇索引**按主键存整行；**二级索引**叶子存的是主键，再回表取整行。
+
+**适合什么样的条件**
+
+| 场景 | 例子 | 能否用 B+Tree |
+|------|------|----------------|
+| 全值匹配 | `class_name = 'MySQL'`、`IN ('a','b')` | 能（`IN` 值过多时优化器可能改走全表） |
+| 范围 | `BETWEEN`、`>`、`<` | 能（键有序） |
+| 复合索引 | `(title, study_cnt)` | 必须从**最左列**开始匹配 |
+
+复合索引最左前缀（案例）：索引 `(title, study_cnt)`
+
+| 条件 | 能否用该索引 |
+|------|----------------|
+| `WHERE title = 'x'` | 能 |
+| `WHERE title = 'x' AND study_cnt > 3000` | 能（优化器可调整条件顺序） |
+| `WHERE study_cnt > 3000`（没用 title） | **不能**（跳过了最左列） |
+
+**在哪些列建索引**
+
+没有万能答案，结合具体 SQL 和选择性。
+
+1. 优先考虑 `WHERE` / `JOIN ON` / `ORDER BY` 里用到的列。  
+2. 要看**选择性**：不同值越多越好（主键最好；性别只有 0/1 很差）。  
+3. 课上案例：查「某日后注册的男性」→ `reg_time` 选择性远好于 `sex`；只在 `sex` 上建索引，执行计划仍可能全表扫描。
+
+```sql
+-- 选择性粗算：唯一值个数 / 总行数（越大越好）
+SELECT
+  COUNT(DISTINCT sex) / COUNT(*) AS sex_sel,
+  COUNT(DISTINCT DATE(reg_time)) / COUNT(*) AS reg_sel
+FROM imc_user;
+
+CREATE INDEX idx_reg_time ON imc_user (reg_time);
+```
+
+> 补：索引加速读，但会增加写成本、占空间；不是列越多越好。误区与 EXPLAIN 下一小节展开。
+
+### 4.1 练习 ★★★★★
+
+1. 索引主要解决什么问题？为什么说在引擎层？  
+2. B+Tree 三个特点？InnoDB 二级索引叶子存什么？  
+3. `IN` 查询一定不能用索引吗？  
+4. 复合索引 `(a,b)` 时，只写 `WHERE b=?` 为何常常用不上？  
+5. 什么是选择性？性别列和注册时间列谁更适合建索引？  
+
+**答案**
+
+1. 让引擎快速定位行；索引由存储引擎实现，不同引擎细节不同。  
+2. 平衡、数据在叶子且有序、叶子相连；二级索引叶子存主键（再回表）。  
+3. 不是；值过多时优化器可能不用索引，但不是绝对不能。  
+4. 违反最左前缀，必须从 a 开始匹配。  
+5. 不同值占比；注册时间通常远好于性别。  

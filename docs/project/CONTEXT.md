@@ -14,7 +14,8 @@
 4. 大实战 — **568**；不做 641  
 5. 面试 — **303**；可选 132；490 后置；480 现阶段不做  
 
-**当前小课：474 · C2.4 分层 Controller/Service/Mapper**（已讲；下一小点 C2.5 MyBatis CRUD）。
+**当前小课：Prompt · G1.2 原则二·给时间思考 + 幻觉 ★★★★★**（插课；资料 `docs/origin/prompt-engineering-for-developers/`；续课 G2 / G3 见 origin）。下一小点：G1.3 迭代优化 Prompt。
+**主线暂停提醒：** Java 主线仍为 568 · E4；本插课学完可回主线。
 **笔记结构：** 同一类语句一个 `###`（DCL / DDL / DML），细节用 `####`；不拆成「DDL · CREATE」「DML · SELECT」多个碎节。
 
 **小点课：** 相关视频节合并成**一个完整知识点**；一次「继续」只讲一个小点；笔记边学边写。  
@@ -30,6 +31,7 @@
 3. 每小课七段式；前端可对照；不用生活比喻；难则给答案+原因。  
 3.1 **小点课：** 相关节**合并**；**一小点 = 一块完整知识**，勿塞太多；「继续」只讲下一个小点。  
 3.2 **笔记：** 精简但全面；`### … ★`；可补课外 `> 补：`；边学边写。  
+3.3 **详略：** **关键新知识点**用 `> 关键：`（对话里标【关键】）展开；已会/对照/操作步骤从简。用户声明跳过的块（如 Vue 基础）不讲、不写笔记。  
 4. 阶段关卡：1 不过不开 2；2 不过不开 3；568/303 在阶段 3 后。  
 5. 勾选 LEARNING；更新本文件「当前小课」。  
 6. 课号锁定：**660（或带学）+ 332 → 382 → 474 → 522 → 568 → 303**；不要体系课。  
@@ -46,8 +48,9 @@
 
 - `ting-*`；`X-Token`；网关 `8080`  
 - 文档：LEARNING + CONTEXT；学习笔记 `docs/notes/`（**提交 Git**）；**660 电子书**在 `docs/origin/`（gitignore，不提交）
-- **阶段笔记：** `java基础.md` · `mysql基础.md` · `java提效.md` · `springboot基础.md` · `springcloudalibaba基础.md`（阶段 3 骨架，过关阶段 2 后再填）
+- **阶段笔记：** `java基础.md` · `mysql基础.md` · `java提效.md` · `springboot基础.md` · `springcloudalibaba基础.md`（阶段 3 骨架，过关阶段 2 后再填）· **`prompt工程.md`（LLM 插课）**
 - 笔记编排：关联条目尽量 **3 或 5**，避免正好 4（口述题等同理）
+- **详略约定（2026-11-19）：** 关键新知识标 `> 关键：` /【关键】；其余简约；已会的前端基础跳过且不写笔记
 - 带学 A · Java：按 LEARNING 表顺序（对齐 660 第 1～16 部分）；读 `docs/origin` 电子书 + 写 `docs/notes/java基础.md`；不逐字复述。第 17 章起等阶段 2。  
 - **视频课跟练（332 等）：** `docs/origin/{课号}-…/` 每节 mp4 同目录文字稿；AI 读稿纠错 → 更新 `docs/notes/` + 对话讲重点；不解析 mp4。  
 
@@ -77,3 +80,34 @@
 | 2026-10-13 | 332 第2章重开 | 用户反馈前半讲不清；从**第2章表设计**重学；节奏放慢、少合并硬塞；旧笔记保留可改 |
 | 2026-09-01 | 332 重开 | 用户要求**重新学 MySQL**；进度回到第 1 章；旧笔记保留对照 |
 | 2026-10-21 | 微服务笔记 | 新建 `docs/notes/springcloudalibaba基础.md`（原拟名微服务基础，已按 SCA 命名）骨架（对齐 D3.1～D3.9）；阶段 2 过关后再带学填写 |
+| 2026-11-19 | 474 重学 2-3 | 笔记增加「项目初始配置」（UTF-8、JDK、Maven 镜像与本地仓库、Git 初次提交、删 `.idea`）；下一小点 2-4 远程仓库 |
+| 2026-11-19 | 474 重学 2-4 | 笔记增加「关联 Git 远程仓库」（SSH、空仓库、remote/push、README、Log 与 origin）；下一小点 2-5 启动日志 |
+| 2026-11-19 | 474 重学 2-5 | 笔记增加「启动日志优化」（logback-spring.xml、入口类启动成功日志、banner.txt、忽略 log/）；下一小点 2-6 Hello World |
+| 2026-11-19 | 474 重学 2-6～2-7 | 合并为笔记 2.5：Hello World、`@RestController`/Mapping、扫描与 404、405、IDEA HTTP Client；下一小点 2-8 配置文件 |
+| 2026-11-19 | 474 重学 2-8 | 笔记 2.6：application 四文件、properties/yml、bootstrap 提示、`@Value` 与默认值；下一小点 2-9 热部署 |
+| 2026-11-19 | 474 重学 2-9 | 笔记 2.7：devtools 三步（依赖、自动编译、运行中 automake）；第2章收束，下一章数据库准备 |
+| 2026-11-19 | 474 跳至 3-6 | 用户要求到查询接口；笔记 3.1：ebook 表、Generator、list 接口、CommonResp；3-2～3-5 可回补 |
+| 2026-11-19 | 474 3-7～3-8 | 合并笔记 3.2：模糊查询、Req/Resp、BeanUtils 与 CopyUtil；第3章列表主线收束 |
+| 2026-11-19 | 474 跳过第4章 | 用户有前端基础：Vue/CLI 等跳过且不写笔记；详略约定：关键新知识标出，其余从简；下接 6-4 分页 |
+| 2026-11-19 | 474 开讲分页 | 跳过 Vue 后直接 6-4～6-5；对话精讲 PageHelper，暂不写笔记 |
+| 2026-11-19 | 474 6-8～6-10 | 跳过前端页；讲 SaveReq、id 空则雪花+insert 否则 update、DeleteMapping；暂不落笔记 |
+| 2026-11-24 | 474 6-11 | Validation：注解 + @Valid + 全局异常转 CommonResp；暂不落笔记 |
+| 2026-11-24 | 474 7-2～7-3 | 跳过 6-12；讲分类邻接表 id+parent、生成器与套用 ebook CRUD；暂不落笔记 |
+| 2026-11-24 | 474 分类筛选 | EbookQueryReq.categoryId2 + Example 等值条件；前端级联略 |
+| 2026-11-24 | 474 8-2～8-3 | 文档邻接表 + ebook_id；CRUD 套分类模板；正文另表后面讲 |
+| 2026-11-24 | 474 content 拆表 | 纵向分表、id 共用、save 双表事务、findContent；暂不落笔记 |
+| 2026-11-24 | 474 用户与密码 | unique + 业务校验/自定义异常；传输+存储两层 MD5（课内）；下接 Token |
+| 2026-11-24 | 474 Token 登录 | 登录发 Token 存 Redis；Header 带 Token；拦截器校验；排除白名单；JWT 概念对照 |
+| 2026-11-24 | 474 部署 | RDS+ECS；prod 配置；jar 后台跑；Nginx 静态+反代；域名解析备案 |
+| 2026-11-24 | 474 首页统计 | 读 ebook_snapshot 聚合昨今；前端可算预计；30 天接口另查 increase |
+| 2026-11-24 | 474 快照收集 | 今日行 not exists 插入；刷累计；减昨日得增量；Job 调 genSnapshot |
+| 2026-11-24 | 474 快照表 | 报表用中间表；ebook_snapshot 按日存累计+日增量；自增 id 因批量 SQL 不经雪花 |
+| 2026-11-24 | 474 异步/MQ | 通知与点赞解耦：`@EnableAsync`+独立 Bean `@Async`；同级自调用失效；MQ 进程外削峰 |
+| 2026-11-24 | 474 WebSocket | 长连接推送 vs 轮询；`@ServerEndpoint` + Session Map 群发；点赞后 `sendInfo` |
+| 2026-11-24 | 474 日志流水号 | Logback `%X{LOG_ID}` + MDC；请求入口 AOP 用雪花填；Job 不经 AOP 需自行 put |
+| 2026-11-24 | 474 定时汇总 | 电子书 doc/view/vote 用定时 + group by 汇总，不在每次点赞/阅读里改 ebook；`@EnableScheduling` + cron |
+| 2026-11-24 | 474 阅读点赞 | MapperCust 自增 SQL；vote + Redis(IP+docId) 防重复；ebook 汇总/定时后置 |
+| 2026-11-25 | Prompt 插课 | origin 加入 `prompt-engineering-for-developers`；笔记 `prompt工程.md`；当前 G1.1；不替代 660→303 主线 |
+| 2026-11-25 | Building Systems 资料 | origin 加入 `building-systems-with-the-chatgpt-api`；排在 G1 之后作 G2；当前仍 G1.1 |
+| 2026-11-25 | G1.2 | 原则二 + 幻觉；笔记已更；下一 G1.3 迭代优化 |
+| 2026-11-25 | Agentic AI 资料 | origin 加入 Datawhale `agentic-ai`；插课 G3；G2 换 Datawhale llm-cookbook 必修二 |
